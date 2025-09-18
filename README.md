@@ -1,5 +1,7 @@
 # SLM Optimization Pipeline for Vertex AI
 
+Authors: Dr. Jens Kohl (BMW), Dr. Michael Menzel (Google), Marcel Gotza (Google)
+
 This repository contains a comprehensive Kubeflow pipeline designed to build, optimize, and evaluate Small Language Models (SLMs) on Google Cloud's Vertex AI platform. It provides a modular and configurable workflow for experimenting with different optimization techniques for automotive and other edge-computing use cases.
 
 ## Overview
