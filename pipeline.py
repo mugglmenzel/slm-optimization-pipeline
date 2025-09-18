@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
 # Authors:
 # - Dr. Jens Kohl, jens.kohl@bmw.de
@@ -375,6 +376,22 @@ def on_device_emulation(
     logging.info("4. Report results as metrics or output artifacts.")
     pass
 
+@dsl.component
+def validate_tuning_method(tuning_method: str):
+    """Validates the provided tuning method."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+
+    allowed_methods = ["gemini-tuning", "huggingface-tuning"]
+    if tuning_method not in allowed_methods:
+        raise ValueError(
+            f"Unknown tuning_method: '{tuning_method}'. "
+            f"Allowed methods are: {allowed_methods}"
+        )
+    logging.info(f"Tuning method '{tuning_method}' is valid. Continuing pipeline.")
+
+
 @dsl.pipeline(
     name="slm-automotive-optimization-pipeline-sequential",
     description="A sequential, modular pipeline to version, optimize, deploy, and evaluate SLMs.",
@@ -384,7 +401,7 @@ def slm_automotive_pipeline(
     location: str,
     base_model_display_name: str,
     serving_container_image: str,
-    tuning_method: str = "huggingface",
+    tuning_method: str = "huggingface-tuning",
     optimization_steps: List[str] = [
         "huggingface-peft-lora",
         "huggingface-quantization",
@@ -405,7 +422,7 @@ def slm_automotive_pipeline(
         location (str): The Google Cloud region for the pipeline.
         base_model_display_name (str): The base display name for models created by this pipeline.
         serving_container_image (str): The URI of the container image for serving the model.
-        tuning_method (str): The optimization method to use ('gemini-supervised-finetuning' or 'huggingface').
+        tuning_method (str): The optimization method to use ('gemini-tuning' or 'huggingface-tuning').
         optimization_steps (List[str]): A list of optimization steps for the Hugging Face branch.
         teacher_model_name (str): The Hugging Face model name for the teacher model in distillation.
         student_model_name (str): The Hugging Face model name for the student model.
@@ -419,15 +436,20 @@ def slm_automotive_pipeline(
     pipeline_timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     versioned_model_name = f"{base_model_display_name}-{pipeline_timestamp}"
 
+    # Step 1: Validate input parameters
+    validation_op = validate_tuning_method(
+        tuning_method=tuning_method
+    ).set_display_name("Validate Tuning Method")
+
     # Step 2: Conditional Optimization.
-    with dsl.If(tuning_method == "gemini-supervised-finetuning", name="gemini-branch"):
+    with dsl.If(tuning_method == "gemini-tuning", name="gemini-branch"):
         gemini_op = gemini_supervised_finetuning(
             project=project,
             location=location,
             model_display_name=versioned_model_name,
             finetuning_dataset_uri=finetuning_dataset_uri,
             base_gemini_model=base_gemini_model,
-        )
+        ).after(validation_op)
     with dsl.Else(name="huggingface-branch"):
         # The Hugging Face component produces a file-based model artifact.
         hf_op = huggingface_optimization_sequence(
@@ -435,7 +457,7 @@ def slm_automotive_pipeline(
             teacher_model_name=teacher_model_name,
             student_model_name=student_model_name,
             huggingface_dataset_name=huggingface_dataset_name,
-        )
+        ).after(validation_op)
         # We then prepare an UnmanagedContainerModel artifact from the output
         # of the HF sequence, adding the necessary container spec metadata.
         prepare_model_op = prepare_unmanaged_model_artifact(

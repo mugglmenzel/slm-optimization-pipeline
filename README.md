@@ -21,7 +21,7 @@ The pipeline is designed to be flexible, allowing users to easily configure mode
 -   **Conditional Logic**: The pipeline uses conditional logic (`dsl.If`/`dsl.Else`) to dynamically select the optimization path at runtime.
 -   **Automated Deployment**: Seamlessly deploys the best model to a Vertex AI Endpoint.
 -   **Automated Evaluation**: Kicks off a standard Vertex AI evaluation job for text generation tasks.
--   **Environment Management**: Includes helper scripts (`setup.sh`, `compile.sh`) for easy environment setup and pipeline execution.
+-   **Modern Packaging**: Uses `poetry` for dependency management and execution.
 -   **Automatic Resource Creation**: The submission script can automatically create the necessary Google Cloud Storage bucket for pipeline artifacts.
 
 ## Prerequisites
@@ -32,6 +32,7 @@ The pipeline is designed to be flexible, allowing users to easily configure mode
     gcloud auth application-default login
     ```
 3.  **Python 3.9+**
+4.  **Poetry**: Follow the installation instructions to install Poetry.
 
 ## How to Run
 
@@ -39,14 +40,10 @@ The pipeline can be compiled and submitted to Vertex AI using a few simple steps
 
 ### 1. Setup the Environment
 
-First, create and activate a Python virtual environment. This ensures that the project's dependencies are isolated from your system's Python packages.
+Install the project dependencies using Poetry. This will create a virtual environment and install all packages listed in `pyproject.toml`.
 
 ```bash
-# Create a virtual environment in a directory named .venv
-python3 -m venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate
+poetry install
 ```
 
 ### 2. Configure the Pipeline Run
@@ -61,10 +58,10 @@ The script will automatically discover your `PROJECT_ID` and create a default `P
 
 ### 3. Compile and Submit
 
-With your virtual environment still active, run the pipeline.py script. It will first compile the pipeline to a JSON file and then, if configured, submit it as a new job to Vertex AI Pipelines.
+Run the pipeline.py script using poetry run. This command executes the script within the Poetry-managed virtual environment. The script will first compile the pipeline to a JSON file and then, if configured, submit it as a new job to Vertex AI Pipelines.
 
 ```bash
-python pipeline.py
+poetry run python pipeline.py
 ```
 
 You will see a link to the pipeline run in your terminal output.
